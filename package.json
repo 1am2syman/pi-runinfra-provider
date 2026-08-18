@@ -1,0 +1,35 @@
+{
+  "name": "pi-runinfra-provider",
+  "version": "1.0.0",
+  "description": "RunInfra custom provider extension for pi — API-key login, live model catalog, reasoning control and per-model pricing for https://runinfra.ai",
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "files": [
+    "index.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit index.ts"
+  },
+  "keywords": [
+    "pi",
+    "pi-extension",
+    "pi-provider",
+    "runinfra",
+    "llm",
+    "provider",
+    "openai-compatible"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "license": "MIT",
+  "author": "1am2syman"
+}
