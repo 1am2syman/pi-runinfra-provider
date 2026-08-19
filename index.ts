@@ -84,11 +84,24 @@ const BASELINE_SPECS: ModelSpec[] = [
   {
     id: "deepseek-v4-pro",
     name: "DeepSeek V4 Pro",
-    reasoning: false, // "already off" — answers without reasoning
+    // Verified live (2026-08): reasoning is OFF by default when
+    // reasoning_effort is omitted, but the gateway ACCEPTS every effort
+    // value (HTTP 200) and produces reasoning_content above "none".
+    reasoning: true,
     canDisableReasoning: true,
     contextWindow: 1_048_576,
     maxTokens: 32_768,
     cost: { input: 0.6, cacheRead: 0.03, output: 1.9 },
+    // All 7 effort values accepted (probed individually, HTTP 200).
+    effortMap: {
+      off: "none",
+      minimal: "minimal",
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "xhigh",
+      max: "max",
+    },
   },
   {
     id: "qwen3-8-27b",
