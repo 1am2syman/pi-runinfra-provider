@@ -52,6 +52,13 @@ interface ModelSpec {
   maxTokens: number;
   /** USD per 1M tokens. Prices from https://runinfra.ai/inference-api/<model>. */
   cost: { input: number; cacheRead: number; output: number };
+  /**
+   * Per-model pi thinking level → RunInfra reasoning_effort. Values are
+   * verified live against the gateway (2026-08): each model's upstream
+   * accepts a different subset, so no shared map is safe. `null` hides the
+   * level in pi; a missing key disables it for xhigh/max only.
+   */
+  effortMap?: ThinkingLevelMap;
 }
 
 const BASELINE_SPECS: ModelSpec[] = [
@@ -63,6 +70,17 @@ const BASELINE_SPECS: ModelSpec[] = [
     contextWindow: 1_048_576, // documented: 1048576
     maxTokens: 32_768, // documented: 32768
     cost: { input: 0.13, cacheRead: 0.01, output: 0.27 },
+    // Verified: accepts every effort value, so pass each pi level through
+    // 1:1 (users selecting xhigh/max get the gateway's real top end).
+    effortMap: {
+      off: "none",
+      minimal: "minimal",
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "xhigh",
+      max: "max",
+    },
   },
   {
     id: "deepseek-v4-pro",
@@ -81,15 +99,37 @@ const BASELINE_SPECS: ModelSpec[] = [
     contextWindow: 131_072,
     maxTokens: 32_768,
     cost: { input: 0.1, cacheRead: 0.01, output: 0.4 },
+    // Verified: accepts only none/low/medium/xhigh (xhigh is the default).
+    // "high" is REJECTED with 400 — top pi levels map to xhigh.
+    effortMap: {
+      off: "none",
+      minimal: "low",
+      low: "low",
+      medium: "medium",
+      high: "xhigh",
+      xhigh: "xhigh",
+      max: "xhigh",
+    },
   },
   {
     id: "qwen3-8-2-4t-a95b",
     name: "Qwen3.8 2.4T A95B",
     reasoning: true,
-    canDisableReasoning: false, // cannot turn reasoning off
+    canDisableReasoning: false, // gateway: "Disabling thinking is not supported"
     contextWindow: 131_072,
     maxTokens: 32_768,
     cost: { input: 2.0, cacheRead: 0.2, output: 6.0 },
+    // Verified: accepts only low/medium/xhigh (xhigh is the default);
+    // "none"/"minimal"/"max" are rejected.
+    effortMap: {
+      off: null,
+      minimal: "low",
+      low: "low",
+      medium: "medium",
+      high: "xhigh",
+      xhigh: "xhigh",
+      max: "xhigh",
+    },
   },
   {
     id: "nemotron-3-5-lightning-30b",
@@ -99,12 +139,23 @@ const BASELINE_SPECS: ModelSpec[] = [
     contextWindow: 262_144, // documented: 262144
     maxTokens: 32_768,
     cost: { input: 0, cacheRead: 0, output: 0 }, // currently paused; no published price
+    // UNVERIFIED — model paused at probe time (2026-08-19 availability
+    // check). Assuming OpenAI-style values; re-probe when it returns.
+    effortMap: {
+      off: "none",
+      minimal: "low",
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "high",
+      max: "high",
+    },
   },
 ];
 
 const SPEC_BY_ID = new Map(BASELINE_SPECS.map((spec) => [spec.id, spec]));
 
-/** OpenAI-style reasoning_effort values (RunInfra's documented control). */
+/** Fallback for reasoning models without a verified per-model map. */
 const EFFORT_MAP: ThinkingLevelMap = {
   off: "none",
   minimal: "low",
@@ -117,8 +168,7 @@ const EFFORT_MAP: ThinkingLevelMap = {
 
 function thinkingLevelMap(spec: ModelSpec): ThinkingLevelMap | undefined {
   if (!spec.reasoning) return undefined;
-  if (!spec.canDisableReasoning) return { ...EFFORT_MAP, off: null };
-  return EFFORT_MAP;
+  return spec.effortMap ?? EFFORT_MAP;
 }
 
 function compatFor(spec: ModelSpec) {
