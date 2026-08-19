@@ -32,7 +32,7 @@ Then continue with [Setup](#setup) below.
 - **Endpoint:** `https://api.runinfra.ai/v1` — OpenAI-compatible chat completions.
 - **Streaming:** uses pi's built-in `openai-completions` implementation; reasoning
   models stream on `delta.reasoning` and the answer on `delta.content`.
-- **Thinking control:** sends standard `reasoning_effort` (`none`/`low`/`medium`/`high`).
+- **Thinking control:** sends standard `reasoning_effort` (`none`/`minimal`/`low`/`medium`/`high`/`xhigh`/`max`).
   Models that cannot disable reasoning (`qwen3-8-2-4t-a95b`) are marked accordingly.
 - **Live catalog:** after login, the model list is refreshed from `GET /v1/models`
   (per the RunInfra docs: never hard-code a model list). Context windows, max
@@ -51,7 +51,7 @@ Then continue with [Setup](#setup) below.
 | Model | Reasoning | Notes |
 |-------|-----------|-------|
 | `deepseek-v4-flash` | yes | 1M context |
-| `deepseek-v4-pro` | no | answers without reasoning |
+| `deepseek-v4-pro` | yes | off by default; all 7 effort levels accepted (verified 2026-08) |
 | `qwen3-8-27b` | yes | |
 | `qwen3-8-2-4t-a95b` | yes | reasoning cannot be turned off |
 | `nemotron-3-5-lightning-30b` | yes | no tool calling |
