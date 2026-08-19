@@ -53,10 +53,10 @@ interface ModelSpec {
   /** USD per 1M tokens. Prices from https://runinfra.ai/inference-api/<model>. */
   cost: { input: number; cacheRead: number; output: number };
   /**
-   * Per-model pi thinking level → RunInfra reasoning_effort. Values are
-   * verified live against the gateway (2026-08): each model's upstream
-   * accepts a different subset, so no shared map is safe. `null` hides the
-   * level in pi; a missing key disables it for xhigh/max only.
+   * Per-model pi thinking level → RunInfra reasoning_effort.
+   * Policy (strict): ONLY levels the gateway natively accepts get a value;
+   * everything else is `null` and hidden in pi's toggle — no clamped levels.
+   * Verified live against the gateway (2026-08).
    */
   effortMap?: ThinkingLevelMap;
 }
@@ -70,8 +70,7 @@ const BASELINE_SPECS: ModelSpec[] = [
     contextWindow: 1_048_576, // documented: 1048576
     maxTokens: 32_768, // documented: 32768
     cost: { input: 0.13, cacheRead: 0.01, output: 0.27 },
-    // Verified: accepts every effort value, so pass each pi level through
-    // 1:1 (users selecting xhigh/max get the gateway's real top end).
+    // Verified: accepts every effort value, so all 7 pi levels are native.
     effortMap: {
       off: "none",
       minimal: "minimal",
@@ -99,16 +98,16 @@ const BASELINE_SPECS: ModelSpec[] = [
     contextWindow: 131_072,
     maxTokens: 32_768,
     cost: { input: 0.1, cacheRead: 0.01, output: 0.4 },
-    // Verified: accepts only none/low/medium/xhigh (xhigh is the default).
-    // "high" is REJECTED with 400 — top pi levels map to xhigh.
+    // Verified: accepts only none/low/medium/xhigh (xhigh is the default);
+    // "high"/"minimal"/"max" are REJECTED with 400 → hidden in pi.
     effortMap: {
       off: "none",
-      minimal: "low",
+      minimal: null,
       low: "low",
       medium: "medium",
-      high: "xhigh",
+      high: null,
       xhigh: "xhigh",
-      max: "xhigh",
+      max: null,
     },
   },
   {
@@ -120,15 +119,16 @@ const BASELINE_SPECS: ModelSpec[] = [
     maxTokens: 32_768,
     cost: { input: 2.0, cacheRead: 0.2, output: 6.0 },
     // Verified: accepts only low/medium/xhigh (xhigh is the default);
-    // "none"/"minimal"/"max" are rejected.
+    // "none" → "Disabling thinking is not supported", "minimal"/"high"/
+    // "max" rejected → all hidden in pi.
     effortMap: {
       off: null,
-      minimal: "low",
+      minimal: null,
       low: "low",
       medium: "medium",
-      high: "xhigh",
+      high: null,
       xhigh: "xhigh",
-      max: "xhigh",
+      max: null,
     },
   },
   {
@@ -140,30 +140,35 @@ const BASELINE_SPECS: ModelSpec[] = [
     maxTokens: 32_768,
     cost: { input: 0, cacheRead: 0, output: 0 }, // currently paused; no published price
     // UNVERIFIED — model paused at probe time (2026-08-19 availability
-    // check). Assuming OpenAI-style values; re-probe when it returns.
+    // check). Assuming OpenAI-style values only; re-probe when it returns
+    // and tighten/loosen per the strict policy.
     effortMap: {
       off: "none",
-      minimal: "low",
+      minimal: null,
       low: "low",
       medium: "medium",
       high: "high",
-      xhigh: "high",
-      max: "high",
+      xhigh: null,
+      max: null,
     },
   },
 ];
 
 const SPEC_BY_ID = new Map(BASELINE_SPECS.map((spec) => [spec.id, spec]));
 
-/** Fallback for reasoning models without a verified per-model map. */
+/**
+ * Fallback for reasoning models without a verified per-model map. Strict
+ * policy: only OpenAI-standard values exposed; unknowns stay hidden until
+ * probed against the live gateway.
+ */
 const EFFORT_MAP: ThinkingLevelMap = {
   off: "none",
-  minimal: "low",
+  minimal: "minimal",
   low: "low",
   medium: "medium",
   high: "high",
-  xhigh: "high",
-  max: "high",
+  xhigh: null,
+  max: null,
 };
 
 function thinkingLevelMap(spec: ModelSpec): ThinkingLevelMap | undefined {
